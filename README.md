@@ -1,109 +1,92 @@
-# OverTheWire Bandit Walkthrough (Level 0 → Level 5)
+# 🏴‍☠️ OverTheWire: Bandit Walkthrough
 
-A brief documentation of Bandit levels completed, including objectives, commands used, and key Linux concepts learned.
+> My notes as I work through the Bandit wargame. Writing this mostly for myself so I don't forget stuff, but hopefully it helps someone else too.
+>
+> If you're here — don't copy-paste blindly. Actually try to understand what's happening. That's the whole point of Bandit.
 
 ---
 
-# Level 0 → Level 1
+## Table of Contents
 
-## Goal:
-Log into the Bandit server using SSH.
+- [Level 0 → 1](#level-0--1)
+- [Level 1 → 2](#level-1--2)
+- [Level 2 → 3](#level-2--3)
+- [Level 3 → 4](#level-3--4)
+- [Level 4 → 5](#level-4--5)
+- [Level 5 → 6](#level-5--6)
+- [Level 6 → 7](#level-6--7)
+- [Level 7 → 8](#level-7--8)
+- [Level 8 → 9](#level-8--9)
+- [Level 9 → 10](#level-9--10)
 
-## Command:
+---
+
+## Level 0 → 1
+
+Goal: Just log in via SSH.
+
 ```bash
 ssh -p 2220 bandit0@bandit.labs.overthewire.org
 ```
 
-## Key Concept:
-- `ssh` = Secure Shell for remote login
-- `-p 2220` = Specifies custom port
+Password is `bandit0`. Simple enough.
+
+The `-p 2220` flag is just because they're not running SSH on the default port 22. You'll see this a lot in CTF-style challenges.
 
 ---
 
-# Level 1
+## Level 1 → 2
 
-## Goal:
-
-Find the password stored in `readme`.
-
-## Commands:
+Goal: Password is in a file called `readme`.
 
 ```bash
 ls
 cat readme
 ```
 
-## Key Concept:
-
-- `ls` lists files
-- `cat` displays file contents
+Nothing tricky here. `ls` to see what's there, `cat` to read it.
 
 ---
 
-# Level 2
+## Level 2 → 3
 
-## Goal:
-
-Read password from a file named `-`.
-
-## Commands:
+Goal: Password is in a file literally named `-`.
 
 ```bash
-ls
 cat ./-
 ```
 
-## Why `./` is used:
-
-Linux treats `-` as a command option, not a filename.
-
-### `./` means:
-
-“Use the file in the current directory.”
-
-Without `./`:
+This one trips people up. If you just do `cat -`, bash thinks you're telling it to read from stdin (keyboard input) rather than a file. The `./` prefix forces it to treat `-` as a filename in the current directory.
 
 ```bash
+# This doesn't work
 cat -
+
+# This works
+cat ./-
 ```
 
 ---
 
-# Level 3
+## Level 3 → 4
 
-## Goal:
-
-Read password from file:
+Goal: Password is in a file called `spaces in this filename`.
 
 ```bash
---spaces in this filename--
+cat "spaces in this filename"
+# or
+cat spaces\ in\ this\ filename
 ```
 
-## Command:
+Two ways to handle spaces in filenames — quotes or backslash-escaping each space. I prefer quotes, feels cleaner.
 
-```bash
-cat ./--spaces\ in\ this\ filename--
-```
-
-## Key Concepts:
-
-### `./`
-
-Prevents Linux from treating `--` as an option.
-
-### `\`
-
-Escapes spaces so Linux reads the full filename correctly.
+> **Tip:** Tab completion is your best friend here. Start typing the filename and hit Tab — the shell handles the escaping for you automatically.
 
 ---
 
-# Level 4
+## Level 4 → 5
 
-## Goal:
-
-Find password inside a hidden file in `inhere`.
-
-## Commands:
+Goal: Password is in a hidden file inside the `inhere` directory.
 
 ```bash
 cd inhere
@@ -111,311 +94,118 @@ ls -la
 cat ...Hiding-From-You
 ```
 
-## Key Concepts:
-
-- `cd` = Change directory
-- `ls -la` = Show all files, including hidden ones
-- Hidden files begin with `.`
+Hidden files in Linux start with a `.` — `ls` won't show them by default. The `-a` flag reveals them, and `-l` gives you the detailed view. I usually just always use `ls -la`.
 
 ---
 
-# Level 5
+## Level 5 → 6
 
-## Goal:
-
-Find the only human-readable file among multiple files.
-
-## Commands:
+Goal: Only one of the files in `inhere` is human-readable. Find it.
 
 ```bash
 cd inhere
 file ./-file*
+```
+
+Output looks something like:
+
+```
+./-file00: data
+./-file01: data
+...
+./-file07: ASCII text
+...
+```
+
+```bash
 cat ./-file07
 ```
 
-## Key Concepts:
+The `file` command checks what type of data is actually in a file — binary, text, image, etc. Useful when you're guessing blind. The `*` wildcard matches all filenames starting with `-file`.
 
-### `file`
-
-Checks file type (ASCII text, binary, data, etc.)
-
-### `*`
-
-Wildcard matching all files beginning with `-file`
-
-### `./`
-
-Used because filenames beginning with `-` may be mistaken for command options.
-
-### Process:
-
-1. Identify readable file using `file`
-2. Read correct file using `cat`
+The `./` prefix is needed again because filenames starting with `-` look like flags.
 
 ---
 
-# Core Linux Concepts Learned
+## Level 6 → 7
 
-## Special Filenames:
-
-### File named `-`
-
-```bash
-cat ./-
-```
-
-### File with spaces:
-
-```bash
-cat filename\ with\ spaces
-```
-
-### Hidden files:
-
-```bash
-ls -la
-```
-
-### Multiple matching files:
-
-```bash
-file ./-file*
-```
-
----
-
-# Level 6
-
-## Goal:
-
-The password for the next level is stored in a file somewhere under the `inhere` directory and has all of the following properties:
-
-- Human-readable
-- 1033 bytes in size
-- Not executable
-
-## Commands:
+Goal: Somewhere under `inhere`, find a file that is human-readable, exactly 1033 bytes, and not executable.
 
 ```bash
 cd inhere
 find . -type f -size 1033c ! -executable
+```
+
+Output:
+
+```
+./maybehere07/.file2
+```
+
+```bash
 cat ./maybehere07/.file2
 ```
 
-## Key Concepts:
+Breaking down the `find` command:
 
-### `find`
+- `.` — start searching from current directory
+- `-type f` — only regular files (not directories, symlinks, etc.)
+- `-size 1033c` — exactly 1033 bytes (`c` = bytes)
+- `! -executable` — exclude executable files
 
-Searches recursively through directories and subdirectories.
-
-### `.`
-
-Search from the current directory.
-
-### `-type f`
-
-Limits results to regular files only.
-
-### `-size 1033c`
-
-Finds files exactly 1033 bytes in size.
-
-### `! -executable`
-
-Excludes executable files.
-
-### Process:
-
-1. Search all directories under `inhere`
-2. Filter by file size
-3. Exclude executable files
-4. Read matching file
+`find` is one of those commands that feels overwhelming at first but becomes second nature. This level is a good intro to it.
 
 ---
 
-# Level 7
+## Level 7 → 8
 
-## Goal:
-
-The password for the next level is stored somewhere on the server and has all of the following properties:
-
-- Owned by user `bandit7`
-- Owned by group `bandit6`
-- 33 bytes in size
-
-## Commands:
+Goal: File is somewhere on the entire server. Owned by user `bandit7`, group `bandit6`, 33 bytes.
 
 ```bash
 find / -type f -user bandit7 -group bandit6 -size 33c 2>/dev/null
+```
+
+Output:
+
+```
+/var/lib/dpkg/info/bandit7.password
+```
+
+```bash
 cat /var/lib/dpkg/info/bandit7.password
 ```
 
-## Key Concepts:
+The `2>/dev/null` part is important here — searching from `/` will throw a ton of "Permission denied" errors that flood your output. Redirecting stderr (`2>`) to `/dev/null` silences them so you can actually see results.
 
-### `/`
-
-Search entire filesystem.
-
-### `-user`
-
-Filters files by owner.
-
-### `-group`
-
-Filters files by group ownership.
-
-### `-size 33c`
-
-Finds files exactly 33 bytes in size.
-
-### `2>/dev/null`
-
-Suppresses permission denied errors.
-
-### Process:
-
-1. Search entire system
-2. Match owner and group
-3. Match file size
-4. Hide permission errors
-5. Read correct file
+- `-user bandit7` — owned by this user
+- `-group bandit6` — owned by this group
 
 ---
 
-# Level 8
+## Level 8 → 9
 
-## Goal:
-
-The password for the next level is stored in the file `data.txt` next to the word `millionth`.
-
-## Commands:
+Goal: Password is in `data.txt`, on the line next to the word "millionth".
 
 ```bash
 grep "millionth" data.txt
 ```
 
-## Key Concepts:
-
-### `grep`
-
-Searches for lines containing specific text.
-
-### `"millionth"`
-
-Target search word.
-
-### Process:
-
-1. Search file for matching keyword
-2. Display full line
-3. Read password next to keyword
+`grep` searches through a file line by line and prints any line that contains your search string. Dead simple here, but grep is incredibly powerful — worth learning its flags (`-i`, `-r`, `-n`, `-v`, etc.).
 
 ---
 
-# Level 9
+## Level 9 → 10
 
-## Goal:
-
-The password for the next level is stored in the only line of `data.txt` that occurs exactly once.
-
-## Commands:
+Goal: Password is the only line in `data.txt` that appears exactly once.
 
 ```bash
 sort data.txt | uniq -u
 ```
 
-## Key Concepts:
+`sort` rearranges the lines alphabetically, which groups identical lines together. Then `uniq -u` filters down to only lines that appear exactly once (unique lines).
 
-### `sort`
-
-Groups identical lines together.
-
-### `uniq -u`
-
-Displays only unique lines (appearing once).
-
-### `|` (Pipe)
-
-Passes output from one command into another.
-
-### Process:
-
-1. Sort file contents
-2. Group duplicate lines
-3. Display only the unique line
+The `|` pipe is what connects them — output from `sort` goes directly into `uniq`. This is a core Linux pattern and you'll use it constantly.
 
 ---
 
-# Core Linux Concepts Learned
-
-## Special Filenames:
-
-### File named `-`
-
-```bash
-cat ./-
-```
-
-### File with spaces:
-
-```bash
-cat filename\ with\ spaces
-```
-
-### Hidden files:
-
-```bash
-ls -la
-```
-
-### Multiple matching files:
-
-```bash
-file ./-file*
-```
-
----
-
-## Search Commands:
-
-### Recursive search:
-
-```bash
-find .
-```
-
-### Search by size:
-
-```bash
-find . -size 1033c
-```
-
-### Search by owner/group:
-
-```bash
-find / -user username -group groupname
-```
-
-### Suppress errors:
-
-```bash
-2>/dev/null
-```
-
----
-
-## Text Processing:
-
-### Find specific word:
-
-```bash
-grep "word" filename
-```
-
-### Find unique line:
-
-```bash
-sort filename | uniq -u
-```
-
----
+_Still going — will keep updating as I progress through more levels._
