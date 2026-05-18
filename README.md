@@ -21,6 +21,10 @@
 - [Level 13 to 14](#level-13-to-14)
 - [Level 14 to 15](#level-14-to-15)
 - [Level 15 to 16](#level-15-to-16)
+- [Level 16 to 17](#level-16-to-17)
+- [Level 17 to 18](#level-17-to-18)
+- [Level 18 to 19](#level-18-to-19)
+- [Level 19 to 20](#level-19-to-20)
 
 ---
 
@@ -287,7 +291,8 @@ Most real servers use key-based auth. Good level to get comfortable with it.
 Goal: Submit your current password to a service on port 30000 to get the next one.
 
 ```bash
-cat /etc/bandit_pass/bandit14 | nc localhost 30000
+cat /etc/bandit_pass/bandit14
+echo "PASSWORD" | nc localhost 30000
 ```
 
 `nc` (netcat) opens a raw TCP connection. You send data in, you get data back. First time Bandit gets into network territory.
@@ -299,7 +304,7 @@ cat /etc/bandit_pass/bandit14 | nc localhost 30000
 Goal: Same as before but port 30001 requires SSL/TLS, so plain `nc` won't work.
 
 ```bash
-echo "YOUR_PASSWORD" | openssl s_client -connect localhost:30001 -quiet -ign_eof
+echo "PASSWORD" | openssl s_client -connect localhost:30001 -quiet -ign_eof
 ```
 
 `openssl s_client` is basically netcat with encryption. `-quiet` hides the handshake output. `-ign_eof` keeps the connection alive long enough to get the reply.
@@ -311,6 +316,113 @@ openssl s_client -connect localhost:30001 -quiet
 ```
 
 Then paste the password and press `Ctrl + D`.
+
+---
+
+_Still going, will update as I get further._
+
+---
+
+## Level 16 to 17
+
+Goal: Somewhere in the port range 31000-32000 is a TLS service. Send it your current password and it gives back a private SSH key.
+
+**Scan the range first**
+
+```bash
+nmap -p 31000-32000 localhost
+```
+
+This shows which ports are open. You still don't know which one speaks TLS, so test them:
+
+```bash
+openssl s_client -connect localhost:<port> -quiet
+```
+
+If the handshake fails or you get gibberish back, wrong port. If you see certificate info, you found it. Send your password to that port:
+
+```bash
+echo "PASSWORD" | openssl s_client -connect localhost:<port> -quiet -ign_eof
+```
+
+If correct, it responds with a private RSA key. Copy the whole thing.
+
+---
+
+## Level 17 to 18
+
+Goal: Use the private key from the previous level to log in as bandit17.
+
+Save the key into a file:
+
+```bash
+nano bandit17.key
+# paste the key, save and exit
+```
+
+Fix permissions:
+
+```bash
+chmod 600 bandit17.key
+```
+
+SSH will reject keys with loose permissions. 600 means only you can read it.
+
+```bash
+ssh -i bandit17.key -p 2220 bandit17@bandit.labs.overthewire.org
+```
+
+Once in, the password for bandit18 is the only line that differs between `passwords.old` and `passwords.new`:
+
+```bash
+diff passwords.old passwords.new
+```
+
+The line marked with `>` is the new password.
+
+---
+
+## Level 18 to 19
+
+Goal: Password is in `~/readme` but the `.bashrc` has an `exit` call that kicks you out the moment you log in.
+
+The simplest fix is to just run a command directly over SSH without ever starting a full shell:
+
+```bash
+ssh bandit18@bandit.labs.overthewire.org -p 2220 "cat ~/readme"
+```
+
+If you want an actual shell to poke around:
+
+```bash
+ssh -t bandit18@bandit.labs.overthewire.org -p 2220 bash --norc --noprofile
+```
+
+`--norc` and `--noprofile` tell bash to skip loading startup files like `.bashrc`, so the exit never triggers.
+
+---
+
+## Level 19 to 20
+
+Goal: Use a setuid binary sitting in the home directory to read the next password.
+
+```bash
+ls -la
+```
+
+You will see something like:
+
+```
+-rwsr-x--- bandit20 bandit19 ./bandit20-do
+```
+
+The `s` in the permissions means setuid is set. When you run this binary it temporarily runs as bandit20, even though you are bandit19.
+
+```bash
+./bandit20-do cat /etc/bandit_pass/bandit20
+```
+
+That's it. The binary lets you run a command as bandit20, so you just point it at the password file.
 
 ---
 
